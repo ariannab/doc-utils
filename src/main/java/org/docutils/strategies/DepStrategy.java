@@ -7,28 +7,25 @@ import org.docutils.util.StanfordParser;
 
 import java.util.List;
 
-public class DepStrategy implements ParseStrategy {
-
+public class DepStrategy {
 
     /**
-     * This method finds Stanford Parser dependencies in the comment in input.
+     * Finds Stanford Parser dependencies in the comment in input.
      *
      * @param comment the comment
      * @return whether a dependencies was found
      */
-    private static boolean depFound(String comment) {
+    public boolean depFound(String comment, List<String> dependencies) {
 //      Dep such as:  “advcl”, “aux”, “auxpass”, “vmod”, and “tmod”
         Annotation document =
                 new Annotation(comment);
         List<SemanticGraph> graph = StanfordParser.parse(comment);
-        for(SemanticGraph sg : graph) {
+        for (SemanticGraph sg : graph) {
             for (TypedDependency dep : sg.typedDependencies()) {
                 String dependency = dep.reln().toString();
-                if (dependency.equals("tmod") || dependency.equals("aux")
-                        || dependency.equals("advcl") || dependency.equals("auxpass")
-                        || dependency.equals("vmod"))
+                if (dependencies.contains(dependency)) {
                     return true;
-
+                }
             }
         }
         return false;
