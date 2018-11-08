@@ -1,6 +1,6 @@
-package org.replicomment;
+package org.docutils;
 
-import org.replicomment.extractor.*;
+import org.docutils.extractor.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;

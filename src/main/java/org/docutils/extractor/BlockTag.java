@@ -1,6 +1,6 @@
-package org.replicomment.extractor;
+package org.docutils.extractor;
 
-import org.replicomment.util.Checks;
+import org.docutils.util.Checks;
 
 import java.util.Objects;
 

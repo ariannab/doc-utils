@@ -1,4 +1,4 @@
-package org.replicomment.extractor;
+package org.docutils.extractor;
 
 /**
  * Represents a Javadoc @return comment. Each {@link ReturnTag} consists of a comment and a

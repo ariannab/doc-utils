@@ -1,4 +1,4 @@
-package org.replicomment.util;
+package org.docutils.util;
 
 import java.util.Objects;
 

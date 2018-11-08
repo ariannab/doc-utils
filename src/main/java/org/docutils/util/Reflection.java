@@ -1,7 +1,7 @@
-package org.replicomment.util;
+package org.docutils.util;
 
 import org.apache.commons.io.FileUtils;
-import org.replicomment.JavadocClonesFinder;
+import org.docutils.JavadocClonesFinder;
 
 import java.io.File;
 import java.io.IOException;

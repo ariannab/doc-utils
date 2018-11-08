@@ -1,4 +1,4 @@
-package org.replicomment;
+package org.docutils;
 
 import edu.stanford.nlp.pipeline.*;
 import edu.stanford.nlp.trees.*;
@@ -6,10 +6,10 @@ import edu.stanford.nlp.semgraph.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
-import org.replicomment.extractor.DocumentedExecutable;
-import org.replicomment.extractor.DocumentedType;
-import org.replicomment.extractor.JavadocExtractor;
-import org.replicomment.util.StanfordParser;
+import org.docutils.extractor.DocumentedExecutable;
+import org.docutils.extractor.DocumentedType;
+import org.docutils.extractor.JavadocExtractor;
+import org.docutils.util.StanfordParser;
 
 import java.io.File;
 import java.io.FileWriter;

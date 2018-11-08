@@ -1,4 +1,4 @@
-package org.replicomment.extractor;
+package org.docutils.extractor;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
@@ -15,7 +15,7 @@ import com.github.javaparser.javadoc.Javadoc;
 import com.github.javaparser.javadoc.JavadocBlockTag;
 import com.github.javaparser.javadoc.JavadocBlockTag.Type;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.replicomment.util.Reflection;
+import org.docutils.util.Reflection;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import static org.replicomment.extractor.DocumentedExecutable.BlockTags;
+import static org.docutils.extractor.DocumentedExecutable.BlockTags;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -335,7 +335,7 @@ public final class JavadocExtractor {
    * Instantiate the {@code DocumentedParameter} according to the list of source parameters.
    *
    * @param sourceParams the {@code NodeList} of parameters found in source
-   * @return the list of {@code org.toradocu.main.org.replicomment.extractor.DocumentedParameter}
+   * @return the list of {@code org.toradocu.main.org.docutils.extractor.DocumentedParameter}
    */
   private List<DocumentedParameter> createDocumentedParameters(
       NodeList<com.github.javaparser.ast.body.Parameter> sourceParams) {

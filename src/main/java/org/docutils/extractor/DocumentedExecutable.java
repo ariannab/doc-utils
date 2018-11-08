@@ -1,8 +1,8 @@
-package org.replicomment.extractor;
+package org.docutils.extractor;
 
 import com.github.javaparser.ast.body.CallableDeclaration;
 import com.github.javaparser.ast.expr.SimpleName;
-import org.replicomment.util.Checks;
+import org.docutils.util.Checks;
 
 import java.util.Collections;
 import java.util.List;

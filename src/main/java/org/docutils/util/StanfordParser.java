@@ -1,4 +1,4 @@
-package org.replicomment.util;
+package org.docutils.util;
 
 import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.ling.HasWord;
