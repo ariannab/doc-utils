@@ -3,7 +3,7 @@ package org.docutils.util;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Cleaner {
+public class TextOperations {
 
     /**
      * Filter out empty free texts and free texts pointing at inheritDoc.
@@ -73,5 +73,15 @@ public class Cleaner {
                 .replaceAll("&gt;", ">")
                 .replaceAll("&lt;", "<")
                 .replaceAll("&amp;", "&");
+    }
+
+    /**
+     * Native splitting of a paragraph into sentences (might be good enough).
+     *
+     * @param comment is the paragraph to split
+     * @return the sentences
+     */
+    public static String[] splitInSentences(String comment) {
+        return comment.split("\\. ");
     }
 }

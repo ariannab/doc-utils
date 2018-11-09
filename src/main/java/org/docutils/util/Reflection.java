@@ -51,7 +51,7 @@ public class Reflection {
     try {
       List<String> jars = FileUtils.readLines(new File(
               CommentParser.class
-                      .getResource("/old-list-jars.txt").getPath()));
+                      .getResource("/jars.txt").getPath()));
       for(String jar : jars){
         urls.add(new URL("file:"+jar));
       }

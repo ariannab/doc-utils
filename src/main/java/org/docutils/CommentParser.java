@@ -10,7 +10,7 @@ import org.docutils.extractor.DocumentedExecutable;
 import org.docutils.extractor.DocumentedType;
 import org.docutils.extractor.JavadocExtractor;
 import org.docutils.util.Args;
-import org.docutils.util.Cleaner;
+import org.docutils.util.TextOperations;
 import org.junit.Assert;
 
 import java.io.File;
@@ -23,16 +23,16 @@ public class CommentParser {
 
     public static void main(String[] args) throws IOException {
         Args arguments = new Args();
-        String[] argv = { "--analysis", "temporal"};
+        String[] argv = {"--analysis", "equivalence"};
         JCommander.newBuilder()
                 .addObject(arguments)
                 .build()
                 .parse(argv);
 
-        Assert.assertEquals(arguments.getAnalysis(), Args.ANALYSIS.TEMPORAL);
+        Assert.assertEquals(arguments.getAnalysis(), Args.ANALYSIS.EQUIVALENCE);
 
         List<String> sourceFolders = FileUtils.readLines(new File(
-                CommentParser.class.getResource("/tmp.txt").getPath()));
+                CommentParser.class.getResource("/sources.txt").getPath()));
 
         int count = 0;
         for (String sourceFolder : sourceFolders) {
@@ -51,6 +51,11 @@ public class CommentParser {
             writer.append("Type");
             writer.append(';');
             writer.append("Comment");
+            if (arguments.getAnalysis().equals(Args.ANALYSIS.EQUIVALENCE)) {
+                writer.append(';');
+                writer.append("Equivalent");
+            }
+
             writer.append('\n');
             System.out.println("[INFO] Analyzing " + sourceFolder + " ...");
 
@@ -60,39 +65,55 @@ public class CommentParser {
                 DocumentedType documentedType = javadocExtractor.extract(
                         className, sourceFolder);
 
-                if (documentedType != null) {
-                    List<DocumentedExecutable> executables = documentedType.getDocumentedExecutables();
-                    for (DocumentedExecutable method : executables) {
-                        if (!Cleaner.freeTextToFilter(method.getJavadocFreeText())) {
-                            String cleanComment = Cleaner.cleanTags(method.getJavadocFreeText());
+                if (documentedType == null) continue;
+                List<DocumentedExecutable> executables = documentedType.getDocumentedExecutables();
+                for (DocumentedExecutable method : executables) {
+                    if (!TextOperations.freeTextToFilter(method.getJavadocFreeText())) {
+                        String cleanComment = TextOperations.cleanTags(method.getJavadocFreeText());
 
-                            boolean anythingFound = false;
-                            if(arguments.getAnalysis()!=null) {
-                                switch (arguments.getAnalysis()) {
-                                    case TEMPORAL:
-                                        anythingFound =
-                                                TemporalConstraints.isResultPositive(cleanComment);
-                                        break;
+                        String[] sentences = TextOperations.splitInSentences(cleanComment);
+                        for(String sentence : sentences) {
+                            switch (arguments.getAnalysis()) {
+                                case TEMPORAL: {
+                                    boolean anythingFound =
+                                            TemporalConstraints.isResultPositive(sentence);
 
-                                    case EQUIVALENCE:
-                                        anythingFound =
-                                                Equivalences.isResultPositive(cleanComment);
-                                        break;
+                                    if (anythingFound) {
+                                        writer.append(className);
+                                        writer.append(';');
+                                        writer.append(method.getSignature());
+                                        writer.append(';');
+                                        writer.append("Free text");
+                                        writer.append(';');
+                                        writer.append(sentence.replaceAll(";", ","));
+                                        writer.append("\n");
+                                    }
+                                    break;
+                                }
+
+                                case EQUIVALENCE: {
+                                    String methodEquivalent =
+                                            Equivalences.isResultPositive(sentence);
+
+                                    if (methodEquivalent != null) {
+                                        writer.append(className);
+                                        writer.append(';');
+                                        writer.append(method.getSignature());
+                                        writer.append(';');
+                                        writer.append("Free text");
+                                        writer.append(';');
+                                        writer.append(sentence.replaceAll(";", ","));
+                                        writer.append(';');
+                                        writer.append(methodEquivalent);
+                                        writer.append("\n");
+                                    }
+                                    break;
                                 }
                             }
-                            //TODO same for strategies here
-
-                            if (anythingFound) {
-                                writer.append(className);
-                                writer.append(';');
-                                writer.append(method.getSignature());
-                                writer.append(';');
-                                writer.append("Free text");
-                                writer.append(';');
-                                writer.append(cleanComment.replaceAll(";", ","));
-                                writer.append("\n");
-                            }
                         }
+
+                        //TODO same for strategies here
+
                     }
                 }
             }
