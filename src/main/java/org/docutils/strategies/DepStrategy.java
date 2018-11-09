@@ -15,7 +15,7 @@ public class DepStrategy {
      * @param comment the comment
      * @return whether a dependencies was found
      */
-    public boolean depFound(String comment, List<String> dependencies) {
+    public static boolean depFound(String comment, List<String> dependencies) {
 //      Dep such as:  “advcl”, “aux”, “auxpass”, “vmod”, and “tmod”
         Annotation document =
                 new Annotation(comment);

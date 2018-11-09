@@ -7,7 +7,7 @@ import java.util.Collections;
 
 public class TemporalConstraints {
 
-    public boolean temporalConstrFound(String comment){
+    public static boolean isResultPositive(String comment){
         DepStrategy depStrategy = new DepStrategy();
         ArrayList<String> depList = new ArrayList<String>();
         Collections.addAll(depList, "tmod", "aux", "advcl", "auxpass", "vmod");

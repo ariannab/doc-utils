@@ -2,25 +2,27 @@ package org.docutils.util;
 
 import com.beust.jcommander.Parameter;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class Args {
-    @Parameter
-    private List<String> parameters = new ArrayList<>();
 
-    @Parameter(names = "--temporal")
-    public boolean temporal = false;
+    public enum ANALYSIS {
+        TEMPORAL, EQUIVALENCE;
+    }
 
-    @Parameter(names = "--equivalence")
-    public boolean equivalence = false;
+    public enum STRATEGY {
+        DEP, KEYWORD, REGEX;
+    }
 
-    @Parameter(names = "--dep", variableArity = true)
-    public List<String> dependencies = new ArrayList<>();
+    @Parameter(names = "--analysis", hidden = true)
+    private ANALYSIS analysis = null;
 
-    @Parameter(names = "--keywords", variableArity = true)
-    public List<String> keywords = new ArrayList<>();
+    @Parameter(names = "--strategy")
+    private STRATEGY strategy = null;
 
-    @Parameter(names = "--regex")
-    public String regex = "";
+    public ANALYSIS getAnalysis() {
+        return analysis;
+    }
+
+    public STRATEGY getStrategy() {
+        return strategy;
+    }
 }

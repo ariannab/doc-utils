@@ -1,7 +1,7 @@
 package org.docutils.util;
 
 import org.apache.commons.io.FileUtils;
-import org.docutils.JavadocClonesFinder;
+import org.docutils.CommentParser;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,7 +50,7 @@ public class Reflection {
     final List<URL> urls = new ArrayList<>();
     try {
       List<String> jars = FileUtils.readLines(new File(
-              JavadocClonesFinder.class
+              CommentParser.class
                       .getResource("/old-list-jars.txt").getPath()));
       for(String jar : jars){
         urls.add(new URL("file:"+jar));
