@@ -165,7 +165,7 @@ public final class JavadocExtractor {
       // in order to find eventual Exception classes located in the same package.
       // "package-info" files are not useful for this purpose.
       String name = getClassNameForSource(file.getName(), className);
-      if (name != null && !name.equals(className) && !name.contains("package-info")) {
+      if (name != null && !name.contains("package-info")) {
         classesInPackage.add(name);
       }
     }

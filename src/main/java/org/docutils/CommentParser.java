@@ -114,8 +114,11 @@ public class CommentParser {
 
                                     if (methodEquivalent != null) {
                                         int inClass = 0, inPackage = 0, inProject = 0, inUnknown = 0;
-                                        List<String> packageClasses = javadocExtractor.getClassesInSamePackage(className, sourceFolder);
-                                        String where = whereIsEqMethod(documentedType, methodEquivalent, packageClasses);
+                                        String sourcePath = buildPackagePath(className, sourceFolder);
+                                        List<String> packageClasses = javadocExtractor.
+                                                getClassesInSamePackage(className, sourcePath);
+                                        String where = whereIsMethodDeclared(
+                                                documentedType, methodEquivalent, selectedClassNames, packageClasses);
                                         switch (where) {
                                             case "C":
                                                 inClass = 1;
@@ -177,28 +180,66 @@ public class CommentParser {
     }
 
     /**
-     * Tells whether the equivalent method is located in the same class (C), package (P), system (S) of the original
-     * method. U means unknown and typically means the method is in another system.
+     * @param className
+     * @param sourceFolder
+     * @return
+     */
+    private static String buildPackagePath(String className, String sourceFolder) {
+        String classPath = className.substring(0, className.lastIndexOf("."));
+        classPath = classPath.replaceAll("\\.", "/");
+        String result = sourceFolder + classPath;
+        if(result.charAt((result.length()-1))!='/'){
+            result+="/";
+        }
+        System.out.println(result);
+        return result;
+    }
+
+
+    /**
+     * Tells whether the method is located in the class (C), package (P), system (S).
+     * "U" means Unknown and typically means the method is in another system.
      *
-     * @param type the type of the method's class
-     * @param methodEquivalent the method supposed to be equivalent
+     * @param type           the class
+     * @param method         the method
+     * @param systemClasses  all the class names in the system
      * @param packageClasses the classes in the same package
      * @return a string representing the location (C, P, S, U)
      */
-    private static String whereIsEqMethod(DocumentedType type, String methodEquivalent, List<String> packageClasses) {
+    private static String whereIsMethodDeclared(DocumentedType type, String method, String[] systemClasses, List<String> packageClasses) {
         //TODO look if the method name is smt like Class#method or Class.method and look into packageClasses!
         //TODO Currently there is no parse of the method name so this is all very naive
+        method = method.trim();
         List<DocumentedExecutable> executables = type.getDocumentedExecutables();
-        int parenthesis = methodEquivalent.indexOf("(");
-        String methodSimpleName = "";
-        if (parenthesis != -1) {
-            methodSimpleName = methodEquivalent.substring(0, methodEquivalent.indexOf("("));
-        }
-        for (DocumentedExecutable ex : executables) {
-            if (ex.getSignature().contains(methodSimpleName)) {
-                return "C";
+        int parenthesis = method.indexOf("(");
+        int hashMark = method.indexOf("#");
+        String methodSimpleName;
+
+        if (parenthesis != -1 && hashMark == -1) {
+            methodSimpleName = method.substring(0, parenthesis);
+            for (DocumentedExecutable ex : executables) {
+                if (ex.getSignature().contains(methodSimpleName)) {
+                    return "C";
+                }
             }
         }
+        if (hashMark != -1) {
+            String methodClass = method.substring(0, hashMark);
+
+            if (!packageClasses.isEmpty()) {
+                for (String pclass : packageClasses) {
+                    if (pclass.endsWith("."+methodClass)) {
+                        return "P";
+                    }
+                }
+                for (String sclass : systemClasses) {
+                    if (sclass.endsWith("."+methodClass)) {
+                        return "S";
+                    }
+                }
+            }
+        }
+
         return "U";
     }
 

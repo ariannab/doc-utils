@@ -30,6 +30,7 @@ public class Equivalences {
      * @return the signature of the (supposedly) equivalent method
      */
     private static String equivalenceFound(String comment, List<String> keywords) {
+        //FIXME this regex admits some false positives, e.g. when in a sentence there are multiple parentheses
         String methodRegex = " (?![0-9])\\w+(\\(.*\\)\\.?(?!$)|\\.\\w+|#\\w+)+";
         for (String word : keywords) {
             if (Pattern.compile("\\b" + word + "\\b", Pattern.CASE_INSENSITIVE).matcher(comment).find()) {
