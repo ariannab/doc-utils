@@ -150,7 +150,7 @@ public final class JavadocExtractor {
    * @param sourceFile path of the class source file
    * @return list of String holding the qualified class names found in folder
    */
-  private List<String> getClassesInSamePackage(String className, String sourceFile) {
+  public List<String> getClassesInSamePackage(String className, String sourceFile) {
     // TODO Improve the code: this method should return all the available types in a given package.
     // TODO Replace string manipulation by using data structures
     String packagePath = sourceFile.substring(0, sourceFile.lastIndexOf("/"));

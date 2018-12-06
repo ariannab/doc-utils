@@ -54,7 +54,20 @@ public class CommentParser {
             if (arguments.getAnalysis().equals(Args.ANALYSIS.EQUIVALENCE)) {
                 writer.append(';');
                 writer.append("Equivalent");
+                writer.append(';');
+                //Report whether it is in same class...
+                writer.append("C");
+                writer.append(';');
+                //Report whether it is in same package...
+                writer.append("P");
+                writer.append(';');
+                //Report whether it is inside project...
+                writer.append("S");
+                writer.append(';');
+                //Report whether it is unknown...
+                writer.append("U");
             }
+
 
             writer.append('\n');
             System.out.println("[INFO] Analyzing " + sourceFolder + " ...");
@@ -72,7 +85,7 @@ public class CommentParser {
                         String cleanComment = TextOperations.cleanTags(method.getJavadocFreeText());
 
                         String[] sentences = TextOperations.splitInSentences(cleanComment);
-                        for(String sentence : sentences) {
+                        for (String sentence : sentences) {
                             switch (arguments.getAnalysis()) {
                                 case TEMPORAL: {
                                     boolean anythingFound =
@@ -92,19 +105,60 @@ public class CommentParser {
                                 }
 
                                 case EQUIVALENCE: {
+//                                    if(className.contains("AbstractStorelessUnivariateStatistic")
+//                                    && method.getSignature().contains("evaluate")){
+//                                        System.out.println("DEBUG");
+//                                    }
                                     String methodEquivalent =
                                             Equivalences.isResultPositive(sentence);
 
                                     if (methodEquivalent != null) {
+                                        int inClass = 0, inPackage = 0, inProject = 0, inUnknown = 0;
+                                        List<String> packageClasses = javadocExtractor.getClassesInSamePackage(className, sourceFolder);
+                                        String where = whereIsEqMethod(documentedType, methodEquivalent, packageClasses);
+                                        switch (where) {
+                                            case "C":
+                                                inClass = 1;
+                                                break;
+                                            case "P":
+                                                inPackage = 1;
+                                                break;
+                                            case "S":
+                                                inProject = 1;
+                                                break;
+                                            case "U":
+                                                inUnknown = 1;
+                                                break;
+                                        }
+
+                                        //Report class name
                                         writer.append(className);
                                         writer.append(';');
+                                        //Report method signature
                                         writer.append(method.getSignature());
                                         writer.append(';');
+                                        //Report type of comment
                                         writer.append("Free text");
                                         writer.append(';');
+                                        //Report comment sentence
                                         writer.append(sentence.replaceAll(";", ","));
                                         writer.append(';');
+                                        //Report method that is equivalent
                                         writer.append(methodEquivalent);
+                                        writer.append(';');
+                                        //Report whether it is in same class...
+                                        writer.append(String.valueOf(inClass));
+                                        writer.append(';');
+                                        //Report whether it is in same package...
+                                        writer.append(String.valueOf(inPackage));
+                                        writer.append(';');
+                                        //Report whether it is inside project...
+                                        writer.append(String.valueOf(inProject));
+                                        writer.append(';');
+                                        //Report whether it is unknown...
+                                        writer.append(String.valueOf(inUnknown));
+                                        writer.append(';');
+
                                         writer.append("\n");
                                     }
                                     break;
@@ -120,6 +174,32 @@ public class CommentParser {
             writer.flush();
             writer.close();
         }
+    }
+
+    /**
+     * Tells whether the equivalent method is located in the same class (C), package (P), system (S) of the original
+     * method. U means unknown and typically means the method is in another system.
+     *
+     * @param type the type of the method's class
+     * @param methodEquivalent the method supposed to be equivalent
+     * @param packageClasses the classes in the same package
+     * @return a string representing the location (C, P, S, U)
+     */
+    private static String whereIsEqMethod(DocumentedType type, String methodEquivalent, List<String> packageClasses) {
+        //TODO look if the method name is smt like Class#method or Class.method and look into packageClasses!
+        //TODO Currently there is no parse of the method name so this is all very naive
+        List<DocumentedExecutable> executables = type.getDocumentedExecutables();
+        int parenthesis = methodEquivalent.indexOf("(");
+        String methodSimpleName = "";
+        if (parenthesis != -1) {
+            methodSimpleName = methodEquivalent.substring(0, methodEquivalent.indexOf("("));
+        }
+        for (DocumentedExecutable ex : executables) {
+            if (ex.getSignature().contains(methodSimpleName)) {
+                return "C";
+            }
+        }
+        return "U";
     }
 
     /**
