@@ -30,23 +30,24 @@ public class Equivalences {
      * @return the signature of the (supposedly) equivalent method
      */
     private static String equivalenceFound(String comment, List<String> keywords) {
-        //FIXME this regex admits some false positives, e.g. when in a sentence there are multiple parentheses
-        String methodRegex = " (?![0-9])\\w+(\\(.*\\)\\.?(?!$)|\\.\\w+|#\\w+)+";
+        String methodRegex = "\\w+(\\(.*?(?<!\\) )\\)|\\.\\w+|#\\w+)+";
         for (String word : keywords) {
             if (Pattern.compile("\\b" + word + "\\b", Pattern.CASE_INSENSITIVE).matcher(comment).find()) {
                 //I do not only want the comment to contain the keywords, I also want to find a
                 //method signature in it - otherwise, what is this method equivalent to?
                 java.util.regex.Matcher methodMatch;
+                int group = 0;
                 if (word.equals("as")) {
                     methodMatch =
-                            Pattern.compile(" as " + methodRegex).matcher(comment);
+                            Pattern.compile(" as (" + methodRegex+")").matcher(comment);
+                    group = 1;
                 } else {
                     methodMatch =
                             Pattern.compile(methodRegex).matcher(comment);
                 }
 
                 if (methodMatch.find()) {
-                    return methodMatch.group(0);
+                    return methodMatch.group(group);
                 }
             }
         }
