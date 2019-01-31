@@ -5,6 +5,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.docutils.analysis.Equivalences;
+import org.docutils.util.MethodMatch;
 import org.docutils.analysis.TemporalConstraints;
 import org.docutils.extractor.DocumentedExecutable;
 import org.docutils.extractor.DocumentedType;
@@ -50,7 +51,11 @@ public class CommentParser {
             writer.append(';');
             writer.append("Type");
             writer.append(';');
-            writer.append("Comment");
+            writer.append("Comment Text");
+            writer.append(';');
+            writer.append("Sentence");
+            writer.append(';');
+            writer.append("Equiv/Simil");
             if (arguments.getAnalysis().equals(Args.ANALYSIS.EQUIVALENCE)) {
                 writer.append(';');
                 writer.append("Equivalent");
@@ -67,7 +72,6 @@ public class CommentParser {
                 //Report whether it is unknown...
                 writer.append("U");
             }
-
 
             writer.append('\n');
             System.out.println("[INFO] Analyzing " + sourceFolder + " ...");
@@ -109,8 +113,8 @@ public class CommentParser {
 //                                    && method.getSignature().contains("evaluate")){
 //                                        System.out.println("DEBUG");
 //                                    }
-                                    String methodEquivalent =
-                                            Equivalences.isResultPositive(sentence);
+                                    MethodMatch methodEquivalent =
+                                            Equivalences.getEquivalentOrSimilarMethod(sentence);
 
                                     if (methodEquivalent != null) {
                                         int inClass = 0, inPackage = 0, inProject = 0, inUnknown = 0;
@@ -118,7 +122,7 @@ public class CommentParser {
                                         List<String> packageClasses = javadocExtractor.
                                                 getClassesInSamePackage(className, sourcePath);
                                         String where = whereIsMethodDeclared(
-                                                documentedType, methodEquivalent, selectedClassNames, packageClasses);
+                                                documentedType, methodEquivalent.getMethod(), selectedClassNames, packageClasses);
                                         switch (where) {
                                             case "C":
                                                 inClass = 1;
@@ -143,11 +147,21 @@ public class CommentParser {
                                         //Report type of comment
                                         writer.append("Free text");
                                         writer.append(';');
-                                        //Report comment sentence
+                                        //Report comment text
+                                        writer.append(cleanComment.replaceAll(";", ","));
+                                        writer.append(';');
+                                        //Report sentence
                                         writer.append(sentence.replaceAll(";", ","));
                                         writer.append(';');
+                                        //Report whether method is equivalent or similar
+                                        if(methodEquivalent.isEquivalence())
+                                            writer.append("Equivalent");
+                                        else
+                                            writer.append("Similar");
+
+                                        writer.append(';');
                                         //Report method that is equivalent
-                                        writer.append(methodEquivalent);
+                                        writer.append(methodEquivalent.getMethod());
                                         writer.append(';');
                                         //Report whether it is in same class...
                                         writer.append(String.valueOf(inClass));

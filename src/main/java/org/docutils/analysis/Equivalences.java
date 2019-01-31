@@ -1,7 +1,10 @@
 package org.docutils.analysis;
 
+import org.docutils.util.KeywordsSet;
+import org.docutils.util.MethodMatch;
+
 import java.util.Arrays;
-import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Equivalences {
@@ -13,12 +16,24 @@ public class Equivalences {
      * @param comment comment to parse
      * @return the signature of the (supposedly) equivalent method
      */
-    public static String isResultPositive(String comment) {
+    public static MethodMatch getEquivalentOrSimilarMethod(String comment) {
         //TODO maybe a more comprehensive list (e.g. consider an external dictionary) would be better
         //TODO consider also: behaves (as?), like
-        List<String> equivalenceKw = Arrays.asList("equivalent", "similar", "analog",
-                "prefer", "alternative", "same as", "as");
-        return equivalenceFound(comment, equivalenceKw);
+        KeywordsSet equivalenceKw = new KeywordsSet(Arrays.asList("equivalent", "similar", "analog", "same as", "identical"),
+                KeywordsSet.Category.EQUIVALENCE);
+        MethodMatch methodMatch = getSignatureInMatchingComment(comment, equivalenceKw);
+        if(methodMatch!=null){
+            return methodMatch;
+        }
+        else{
+            KeywordsSet similarityKw = new KeywordsSet(Arrays.asList("prefer", "alternative", "replacement for"),
+                    KeywordsSet.Category.SIMILARITY);
+            methodMatch = getSignatureInMatchingComment(comment, similarityKw);
+            if(methodMatch!=null) {
+                return methodMatch;
+            }
+        }
+        return null;
     }
 
     /**
@@ -26,13 +41,14 @@ public class Equivalences {
      * same sentence).
      *
      * @param comment the comment to parse
-     * @param keywords the keywords to search for
+     * @param keywordsSet the keywords to search for
      * @return the signature of the (supposedly) equivalent method
      */
-    private static String equivalenceFound(String comment, List<String> keywords) {
+    private static MethodMatch getSignatureInMatchingComment(String comment, KeywordsSet keywordsSet) {
         String methodRegex = "\\w+(\\(.*?(?<!\\) )\\)|\\.\\w+|#\\w+)+";
-        for (String word : keywords) {
-            if (Pattern.compile("\\b" + word + "\\b", Pattern.CASE_INSENSITIVE).matcher(comment).find()) {
+        for (String word : keywordsSet.getKw()) {
+            Matcher matcher = Pattern.compile("\\b" + word + "\\b", Pattern.CASE_INSENSITIVE).matcher(comment);
+            if (matcher.find()) {
                 //I do not only want the comment to contain the keywords, I also want to find a
                 //method signature in it - otherwise, what is this method equivalent to?
                 java.util.regex.Matcher methodMatch;
@@ -46,11 +62,25 @@ public class Equivalences {
                             Pattern.compile(methodRegex).matcher(comment);
                 }
 
-                if (methodMatch.find()) {
-                    return methodMatch.group(group);
+                if (methodMatch.find() && !doRangesOverlap(matcher, methodMatch)) {
+                    //TODO check if there is an "if" or "when" or "except" - more?
+                    if(keywordsSet.getCategory().equals(KeywordsSet.Category.SIMILARITY) ||
+                            Pattern.compile("\\b" + "if" + "\\b", Pattern.CASE_INSENSITIVE).matcher(comment).find() ||
+                            Pattern.compile("\\b" + "when" + "\\b", Pattern.CASE_INSENSITIVE).matcher(comment).find() ||
+                            Pattern.compile("\\b" + "except" + "\\b", Pattern.CASE_INSENSITIVE).matcher(comment).find()){
+                        return new MethodMatch(methodMatch.group(group), false, true);
+                    }else{
+                        return new MethodMatch(methodMatch.group(group), true, false);
+                    }
+
                 }
             }
         }
         return null;
+    }
+
+    private static boolean doRangesOverlap(Matcher matcher, Matcher methodMatch) {
+        // We do NOT want that (x1 <= y2 && y1 <= x2)
+        return matcher.start() <= methodMatch.end() && methodMatch.start() <= matcher.end();
     }
 }
