@@ -1,7 +1,8 @@
 package org.docutils.analysis;
 
 import org.docutils.util.KeywordsSet;
-import org.docutils.util.MethodMatch;
+import org.docutils.util.MatchInComment;
+import org.docutils.util.TextOperations;
 
 import java.util.Arrays;
 import java.util.regex.Matcher;
@@ -10,73 +11,90 @@ import java.util.regex.Pattern;
 public class Equivalences {
 
     /**
-     * This method answers to the question "does the comment express an equivalence?".
-     * Basically a man in the middle
+     * This method answers to the question "does the comment express one or more equivalences?".
      *
      * @param comment comment to parse
-     * @return the signature of the (supposedly) equivalent method
+     * @return the equivalence match found in comment
      */
-    public static MethodMatch getEquivalentOrSimilarMethod(String comment) {
+    public static MatchInComment getEquivalentOrSimilarMethod(String comment) {
         //TODO maybe a more comprehensive list (e.g. consider an external dictionary) would be better
         //TODO consider also: behaves (as?), like
         KeywordsSet equivalenceKw = new KeywordsSet(Arrays.asList("equivalent", "similar", "analog", "same as", "identical"),
                 KeywordsSet.Category.EQUIVALENCE);
-        MethodMatch methodMatch = getSignatureInMatchingComment(comment, equivalenceKw);
-        if(methodMatch!=null){
-            return methodMatch;
+
+        KeywordsSet similarityKw = new KeywordsSet(Arrays.asList("prefer", "alternative", "replacement for"),
+                KeywordsSet.Category.SIMILARITY);
+
+        MatchInComment matchInComment = new MatchInComment();
+        String[] sentences = TextOperations.splitInSentences(comment);
+        boolean foundMatch = false;
+        for (String sentence : sentences) {
+            foundMatch = getSignatureInMatchingComment(matchInComment, sentence, equivalenceKw);
+            foundMatch = getSignatureInMatchingComment(matchInComment, sentence, similarityKw) || foundMatch;
         }
-        else{
-            KeywordsSet similarityKw = new KeywordsSet(Arrays.asList("prefer", "alternative", "replacement for"),
-                    KeywordsSet.Category.SIMILARITY);
-            methodMatch = getSignatureInMatchingComment(comment, similarityKw);
-            if(methodMatch!=null) {
-                return methodMatch;
-            }
-        }
-        return null;
+        if(foundMatch)
+         return matchInComment;
+        else
+            return null;
     }
 
     /**
-     * Parses a comment searching for a) presence of one of the keywords b) a method signature (a. and b. in the
+     * Parses a sentence searching for a) presence of one of the keywords b) a method signature (a. and b. in the
      * same sentence).
      *
-     * @param comment the comment to parse
+     *
+     * @param matchInComment match found in comment to update if needed
+     * @param sentence     the sentence to parse
      * @param keywordsSet the keywords to search for
-     * @return the signature of the (supposedly) equivalent method
+     * @return the equivalence match found in sentence
      */
-    private static MethodMatch getSignatureInMatchingComment(String comment, KeywordsSet keywordsSet) {
+    private static boolean getSignatureInMatchingComment(MatchInComment matchInComment,
+                                                         String sentence, KeywordsSet keywordsSet) {
         String methodRegex = "\\w+(\\(.*?(?<!\\) )\\)|\\.\\w+|#\\w+)+";
+        int complexity = 0;
+        boolean found = false;
+
         for (String word : keywordsSet.getKw()) {
-            Matcher matcher = Pattern.compile("\\b" + word + "\\b", Pattern.CASE_INSENSITIVE).matcher(comment);
-            if (matcher.find()) {
-                //I do not only want the comment to contain the keywords, I also want to find a
+            Matcher kwMatcher = Pattern.compile("\\b" + word + "\\b", Pattern.CASE_INSENSITIVE).matcher(sentence);
+            if (kwMatcher.find()) {
+                complexity++;
+                //I do not only want the sentence to contain the keywords, I also want to find a
                 //method signature in it - otherwise, what is this method equivalent to?
                 java.util.regex.Matcher methodMatch;
                 int group = 0;
                 if (word.equals("as")) {
                     methodMatch =
-                            Pattern.compile(" as (" + methodRegex+")").matcher(comment);
+                            Pattern.compile(" as (" + methodRegex + ")").matcher(sentence);
                     group = 1;
                 } else {
                     methodMatch =
-                            Pattern.compile(methodRegex).matcher(comment);
+                            Pattern.compile(methodRegex).matcher(sentence);
                 }
 
-                if (methodMatch.find() && !doRangesOverlap(matcher, methodMatch)) {
-                    //TODO check if there is an "if" or "when" or "except" - more?
-                    if(keywordsSet.getCategory().equals(KeywordsSet.Category.SIMILARITY) ||
-                            Pattern.compile("\\b" + "if" + "\\b", Pattern.CASE_INSENSITIVE).matcher(comment).find() ||
-                            Pattern.compile("\\b" + "when" + "\\b", Pattern.CASE_INSENSITIVE).matcher(comment).find() ||
-                            Pattern.compile("\\b" + "except" + "\\b", Pattern.CASE_INSENSITIVE).matcher(comment).find()){
-                        return new MethodMatch(methodMatch.group(group), false, true);
-                    }else{
-                        return new MethodMatch(methodMatch.group(group), true, false);
+                while (methodMatch.find()) {
+                    if(!doRangesOverlap(kwMatcher, methodMatch)) {
+                        //TODO check if there is an "if" or "when" or "except" - more?
+                        if (keywordsSet.getCategory().equals(KeywordsSet.Category.SIMILARITY) ||
+                                Pattern.compile("\\b" + "if" + "\\b", Pattern.CASE_INSENSITIVE).matcher(sentence).find() ||
+                                Pattern.compile("\\b" + "when" + "\\b", Pattern.CASE_INSENSITIVE).matcher(sentence).find() ||
+                                Pattern.compile("\\b" + "except" + "\\b", Pattern.CASE_INSENSITIVE).matcher(sentence).find()) {
+                            matchInComment.setExactEquivalence(false);
+                            matchInComment.setComplexity(++complexity);
+                            matchInComment.addSignature(methodMatch.group(group));
+                            matchInComment.addSentences(sentence);
+                            found = true;
+                        } else {
+                            matchInComment.setExactEquivalence(true);
+                            matchInComment.setComplexity(complexity);
+                            matchInComment.addSignature(methodMatch.group(group));
+                            matchInComment.addSentences(sentence);
+                            found = true;
+                        }
                     }
-
                 }
             }
         }
-        return null;
+        return found;
     }
 
     private static boolean doRangesOverlap(Matcher matcher, Matcher methodMatch) {

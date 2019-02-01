@@ -18,14 +18,13 @@ public class TextOperations {
 
     public static String cleanTags(String text) {
         text = text.replaceAll("\\s+", " ");
-
         final String codePattern1 = "<code>([A-Za-z0-9_]+)</code>";
         text = removeTags(codePattern1, text);
-
         final String codePattern2 = "\\{@code ([^}]+)\\}";
         text = removeTags(codePattern2, text);
-
-        text = removeTags("\\{@link #?([^}]+)\\}", text);
+        //String linkPattern = "\\{@link #?([^}^ ]+)( [^}]+)?\\}";
+        String linkPattern = "\\{@link #?(\\w+(\\(.*?(?<!\\) )\\)|\\.\\w+|#\\w+)+).*?\\}";
+        text = manageLinks(linkPattern, text);
         text = removeHTMLTags(text);
         text = decodeHTML(text);
         return text.trim();
@@ -83,5 +82,30 @@ public class TextOperations {
      */
     public static String[] splitInSentences(String comment) {
         return comment.split("\\. ");
+    }
+
+    /**
+     * Removes Javadoc inline tags from the comment text preserving the content of the tags.
+     *
+     * @param pattern a regular expression
+     */
+    private static void removeTagsNotContent(String pattern, String text) {
+        Matcher matcher = Pattern.compile(pattern).matcher(text);
+        while (matcher.find()) {
+            text = text.replace(matcher.group(0), matcher.group(1));
+        }
+    }
+
+    private static String manageLinks(String linkPattern, String text) {
+        Matcher matcher = Pattern.compile(linkPattern).matcher(text);
+        while (matcher.find()) {
+//            if (matcher.group(2) != null) {
+//                text = text.replace(matcher.group(1) + " ", "");
+//                //text = manageLinks(linkPattern, text);
+//                //return text;
+//            }
+            text = text.replace(matcher.group(0), matcher.group(1));
+        }
+        return text;
     }
 }
