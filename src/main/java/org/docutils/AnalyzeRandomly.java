@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * A random-driven analysis of method summaries in a Java class.
+ */
 public class AnalyzeRandomly {
 
     public static void main(String[] args) throws IOException {
@@ -108,7 +111,7 @@ public class AnalyzeRandomly {
                 int random = (int) (Math.random() * classSetSize);
                 String className = selectedClassNames.get(random);
                 try {
-                    DocumentedType documentedType = javadocExtractor.extract(
+                    DocumentedType documentedType = javadocExtractor.extractExecutables(
                             className, sourceFolder);
 
                     if (documentedType == null) continue;
@@ -118,7 +121,7 @@ public class AnalyzeRandomly {
                     List<DocumentedExecutable> executables = documentedType.getDocumentedExecutables();
                     DocumentedExecutable documentedExec;
 
-                    // 2. SELECT A RANDOM COMMENT, THAT IS: extract executables and take a random one
+                    // 2. SELECT A RANDOM COMMENT, THAT IS: extractExecutables executables and take a random one
                     do{
                         int otherRandom = (int) (Math.random() * executables.size());
                         documentedExec = executables.get(otherRandom);

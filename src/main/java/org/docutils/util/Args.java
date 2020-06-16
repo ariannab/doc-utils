@@ -5,7 +5,7 @@ import com.beust.jcommander.Parameter;
 public class Args {
 
     public enum ANALYSIS {
-        TEMPORAL, DETAILED_EQUIVALENCE, SIMPLE_SENTENCE_EQ, EVERYTHING
+        TEMPORAL, DETAILED_EQUIVALENCE, SIMPLE_SENTENCE_EQ, EVERYTHING, CLASS_SUMMARY
     }
 
     public enum STRATEGY {

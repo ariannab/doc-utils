@@ -26,6 +26,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Search for a precise property in method summaries of a Java class.
+ */
 public class SpecificAnalyzer {
 
     public static void main(String[] args) throws IOException {
@@ -112,7 +115,7 @@ public class SpecificAnalyzer {
 
             for (String className : selectedClassNames) {
                 try {
-                    DocumentedType documentedType = javadocExtractor.extract(
+                    DocumentedType documentedType = javadocExtractor.extractExecutables(
                             className, sourceFolder);
 
 

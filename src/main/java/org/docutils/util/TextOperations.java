@@ -108,4 +108,11 @@ public class TextOperations {
         }
         return text;
     }
+
+    public static String cleanSummary(String classSummary) {
+        classSummary = removeHTMLTags(classSummary);
+        classSummary = classSummary.replaceAll("[ \n]*\\*[ \n]*", "\n");
+
+        return classSummary;
+    }
 }

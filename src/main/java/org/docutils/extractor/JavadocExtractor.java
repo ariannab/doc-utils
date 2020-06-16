@@ -37,7 +37,7 @@ import static java.util.stream.Collectors.toList;
 
 /**
  * {@code JavadocExtractor} extracts {@code DocumentedExecutable}s from a Java class by means of
- * {@code extract(String, String)}. Uses both .java files and .class files: it obtains executable
+ * {@code extractExecutables(String, String)}. Uses both .java files and .class files: it obtains executable
  * members by means of reflection, then maps each reflection executable member to its corresponding
  * source member.
  */
@@ -49,7 +49,7 @@ public final class JavadocExtractor {
    * information about the executable members of the specified class (including the Javadoc
    * comments).
    *
-   * @param className the qualified class name of the class from which to extract documentation;
+   * @param className the qualified class name of the class from which to extractExecutables documentation;
    *     must be on the classpath
    * @param sourcePath the path to the project source root folder
    * @return a list of documented executable members
@@ -57,7 +57,7 @@ public final class JavadocExtractor {
    * @throws FileNotFoundException if the source code of the class with name {@code className}
    *     cannot be found in path {@code sourcePath}
    */
-  public DocumentedType extract(String className, String sourcePath){
+  public DocumentedType extractExecutables(String className, String sourcePath){
 
     //    log.info("Extracting Javadoc information of {} (in source folder {})", className, sourcePath);
     // Obtain executable members (constructors and methods) by means of reflection.
@@ -134,7 +134,49 @@ public final class JavadocExtractor {
     return null;
   }
 
-  private ImmutablePair<String, String> getFileNameAndSimpleName(Class<?> clazz, String className) {
+    /**
+     * Extracts a class with its Javadoc summary
+     * @param className simple class name
+     * @param sourcePath path to source code
+     * @return the DocumentedType if successfully extracted, or null
+     */
+    public DocumentedType extractClassOnly(String className, String sourcePath){
+        //    log.info("Extracting Javadoc information of {} (in source folder {})", className, sourcePath);
+        // Obtain executable members (constructors and methods) by means of reflection.
+        final Class<?> clazz;
+        try {
+            clazz = Reflection_old.getClass(className);
+        } catch (Throwable e) {
+            return null;
+        }
+        // Obtain executable members (constructors and methods) in the source code.
+        final ImmutablePair<String, String> fileNameAndSimpleName =
+                getFileNameAndSimpleName(clazz, className);
+        final String fileName = fileNameAndSimpleName.getLeft();
+        final String sourceFile =
+                sourcePath + File.separator + fileName.replaceAll("\\.", File.separator) + ".java";
+        final String simpleName = fileNameAndSimpleName.getRight();
+
+        List<String> classesInPackage = getClassesInSamePackage(className, sourceFile);
+
+        try {
+            final ClassOrInterfaceDeclaration sourceClass = getClassDefinition(simpleName, sourceFile);
+            if(sourceClass!=null) {
+              final Optional<com.github.javaparser.ast.comments.Comment> javadocComment =
+                      sourceClass.getComment();
+              if (javadocComment.isPresent()) {
+                return new DocumentedType(clazz, javadocComment.get().getContent());
+              }
+            }
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    private ImmutablePair<String, String> getFileNameAndSimpleName(Class<?> clazz, String className) {
     String fileName;
     String simpleName;
     final int dollarPosition = className.indexOf("$");
@@ -566,8 +608,9 @@ public final class JavadocExtractor {
     if(enumDefinitionOpt.isPresent()){
       return null;
     }
-    throw new IllegalArgumentException(
-        "Impossible to find a class or interface with name " + className + " in " + sourcePath);
+//    throw new IllegalArgumentException(
+//        "Impossible to find a class or interface with name " + className + " in " + sourcePath);
+    return null;
   }
 
   /**

@@ -28,6 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * A complete analysis of all method summaries in a Java class.
+ */
 public class AnalyzeEverything {
 
     final static int MAX_SENTENCES = 500;
@@ -101,7 +104,7 @@ public class AnalyzeEverything {
 
                 alreadyExtractedClasses.add(className);
                 try {
-                    DocumentedType documentedType = javadocExtractor.extract(
+                    DocumentedType documentedType = javadocExtractor.extractExecutables(
                             className, sourceFolder);
 
                     // IN THE SAME CLASS THERE COULD BE DUPLICATED SENTENCES, WE DO NOT WANT DUPLICATES
@@ -113,6 +116,7 @@ public class AnalyzeEverything {
                     List<DocumentedExecutable> executables = documentedType.getDocumentedExecutables();
                     Collections.shuffle(executables);
                     for (DocumentedExecutable documentedExec : executables) {
+                        // ITERATE OVER METHODS, I.E. WE LOOK AT METHOD SUMMARIES
                         if (!TextOperations.freeTextToFilter(documentedExec.getJavadocFreeText())) {
                             String cleanComment = TextOperations.cleanTags(documentedExec.getJavadocFreeText());
                                     String[] sentences = cleanComment.split("\\. ");

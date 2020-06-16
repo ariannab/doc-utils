@@ -3,6 +3,7 @@ package org.docutils.extractor;
 import org.docutils.util.Checks;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Objects;
 
 /** Represents a class or interface that is documented with Javadoc comments. */
@@ -12,6 +13,8 @@ public final class DocumentedType {
   private final Class<?> documentedClass;
   /** Constructors and methods of this documented type. */
   private final List<DocumentedExecutable> documentedExecutables;
+  /** The Javadoc class summary. **/
+  private String classSummary;
 
   /**
    * Creates a new DocumentedType wrapping the given class and with the given constructors and
@@ -26,6 +29,14 @@ public final class DocumentedType {
     Checks.nonNullParameter(documentedExecutables, "documentedExecutables");
     this.documentedClass = documentedClass;
     this.documentedExecutables = documentedExecutables;
+  }
+
+
+  DocumentedType(Class<?> documentedClass, String classSummary) {
+    Checks.nonNullParameter(documentedClass, "documentedClass");
+    this.documentedExecutables = new ArrayList<DocumentedExecutable>();
+    this.documentedClass = documentedClass;
+    this.classSummary = classSummary;
   }
 
   /**
@@ -63,4 +74,8 @@ public final class DocumentedType {
   public int hashCode() {
     return Objects.hash(documentedClass, documentedExecutables);
   }
+
+    public String getClassSummary() {
+      return this.classSummary;
+    }
 }
