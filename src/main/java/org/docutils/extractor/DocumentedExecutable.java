@@ -4,6 +4,7 @@ import com.github.javaparser.ast.body.CallableDeclaration;
 import com.github.javaparser.ast.expr.SimpleName;
 import org.docutils.util.Checks;
 
+import java.lang.reflect.Executable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -15,9 +16,8 @@ import java.util.Objects;
  */
 public final class DocumentedExecutable {
 
-  /** Reflection executable of this DocumentedExecutable. */
-//  private final Executable executable;
-  /** Parameter list. */
+  /** Reflection_old executable of this DocumentedExecutable. */
+  private final Executable executable;
   private final List<DocumentedParameter> parameters;
   private final SimpleName name;
   private final CallableDeclaration.Signature signature;
@@ -113,18 +113,20 @@ public final class DocumentedExecutable {
    * parameters and Javadoc comments introduced by block tags.
    *
 //   * @param executable the executable this DocumentedExecutable wraps, must not be null
+   * @param executable
    * @param name
    * @param signature
    * @param parameters the parameters of this DocumentedExecutable, must not be null
    * @param blockTags the Javadoc comments introduced by block tags (e.g., {@code @param},
- *     {@code @return}) associated with this executable member
+*     {@code @return}) associated with this executable member
    */
-  DocumentedExecutable(SimpleName name, CallableDeclaration.Signature signature, List<DocumentedParameter> parameters, BlockTags blockTags, String javadocFreeText) {
-//    Checks.nonNullParameter(executable, "executable");
+  DocumentedExecutable(Executable executable, SimpleName name,
+                       CallableDeclaration.Signature signature, List<DocumentedParameter> parameters,
+                       BlockTags blockTags, String javadocFreeText) {
+    Checks.nonNullParameter(executable, "executable");
     Checks.nonNullParameter(parameters, "parameters");
-
-//    this.executable = executable;
-//    checkParametersConsistency(executable.getParameters(), parameters);
+    checkParametersConsistency(executable.getParameters(), parameters);
+    this.executable = executable;
     this.name = name;
     this.signature = signature;
     this.parameters = parameters;
@@ -158,6 +160,10 @@ public final class DocumentedExecutable {
 //            "Expected parameter type is " + execParam + " while provided type is " + sourceParam);
 //      }
 //    }
+  }
+
+  public Executable getExecutable() {
+    return executable;
   }
 
   /**

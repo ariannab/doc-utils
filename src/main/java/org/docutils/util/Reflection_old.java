@@ -13,7 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Reflection {
+public class Reflection_old {
 
   private static final Map<String, Class> primitiveClasses = initializePrimitivesMap();
 
@@ -32,7 +32,7 @@ public class Reflection {
   }
 
   /** Makes constructor private to prevent the instantiation of this class objects. */
-  private Reflection() {}
+  private Reflection_old() {}
 
   /**
    * Returns the {@code Class} object for the class with the given name or null if the class could

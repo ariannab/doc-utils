@@ -15,7 +15,7 @@ import com.github.javaparser.javadoc.Javadoc;
 import com.github.javaparser.javadoc.JavadocBlockTag;
 import com.github.javaparser.javadoc.JavadocBlockTag.Type;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.docutils.util.Reflection;
+import org.docutils.util.Reflection_old;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -26,7 +26,9 @@ import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -61,7 +63,7 @@ public final class JavadocExtractor {
     // Obtain executable members (constructors and methods) by means of reflection.
     final Class<?> clazz;
     try {
-      clazz = Reflection.getClass(className);
+      clazz = Reflection_old.getClass(className);
     } catch (Throwable e) {
       return null;
     }
@@ -77,10 +79,19 @@ public final class JavadocExtractor {
 
     if(!sourceExecutables.isEmpty()) {
       // Create the list of ExecutableMembers.
+      // Obtain executable members (constructors and methods) by means of reflection.
+      final List<Executable> reflectionExecutables = getExecutables(clazz);
+      // Maps each reflection executable member to its corresponding source executable member.
+      Map<Executable, CallableDeclaration<?>> executablesMap =
+              mapExecutables(reflectionExecutables, sourceExecutables, className);
+
+      if(executablesMap==null) return null;
       List<String> classesInPackage = getClassesInSamePackage(className, sourceFile);
       List<DocumentedExecutable> documentedExecutables =
               new ArrayList<>(sourceExecutables.size());
-      for (CallableDeclaration<?> sourceCallable : sourceExecutables) {
+      for (Map.Entry<Executable, CallableDeclaration<?>> entry : executablesMap.entrySet()) {
+        final Executable reflectionMember = entry.getKey();
+        final CallableDeclaration<?> sourceCallable = entry.getValue();
         final List<DocumentedParameter> parameters =
                 createDocumentedParameters(
                         sourceCallable.getParameters());
@@ -93,7 +104,6 @@ public final class JavadocExtractor {
         }
 
         final Optional<JavadocComment> javadocComment = sourceCallable.getJavadocComment();
-        final Optional<Javadoc> javadoc = sourceCallable.getJavadoc();
         String freeText = "";
         String parsedFreeText = "";
         if (javadocComment.isPresent()) {
@@ -110,8 +120,8 @@ public final class JavadocExtractor {
 
           }
         }
-        documentedExecutables.add(new DocumentedExecutable(
-                sourceCallable.getName(), sourceCallable.getSignature(), parameters, blockTags, parsedFreeText));
+        documentedExecutables.add(new DocumentedExecutable(reflectionMember, sourceCallable.getName(),
+                sourceCallable.getSignature(), parameters, blockTags, parsedFreeText));
       }
 
       //    log.info(
@@ -397,7 +407,7 @@ public final class JavadocExtractor {
       executables.removeIf(Executable::isSynthetic);
       executables.removeIf(e -> Modifier.isPrivate(e.getModifiers())); // Ignore private members.
       return executables;
-    }catch(Exception e){
+    }catch(Throwable e){
       //nothing
       return Collections.EMPTY_LIST;
     }
@@ -426,6 +436,96 @@ public final class JavadocExtractor {
       //nothing
       return Collections.EMPTY_LIST;
     }
+  }
+
+
+  /**
+   * Maps reflection executable members to source code executable members.
+   *
+   * @param reflectionExecutables the list of reflection members
+   * @param sourceExecutables the list of source code members
+   * @param className name of the class containing the executables
+   * @return a map holding the correspondences
+   */
+  private Map<Executable, CallableDeclaration<?>> mapExecutables(
+          List<Executable> reflectionExecutables,
+          List<CallableDeclaration<?>> sourceExecutables,
+          String className) {
+
+    filterOutGeneratedConstructors(reflectionExecutables, sourceExecutables, className);
+    filterOutEnumMethods(reflectionExecutables, sourceExecutables);
+
+    if (reflectionExecutables.size() != sourceExecutables.size()) {
+      // TODO Add the differences to the error message to better characterize the error.
+      //throw new IllegalArgumentException("Error: Provided lists have different size.");
+        return null;
+    }
+
+    Map<Executable, CallableDeclaration<?>> map = new LinkedHashMap<>(reflectionExecutables.size());
+    for (CallableDeclaration<?> sourceCallable : sourceExecutables) {
+      final List<Executable> matches =
+              reflectionExecutables
+                      .stream()
+                      .filter(
+                              e ->
+                                      getSimpleNameOfExecutable(e.getName(), e instanceof Constructor)
+                                              .equals(sourceCallable.getName().asString())
+                                              && sameParamTypes(e.getParameters(), sourceCallable.getParameters()))
+                      .collect(toList());
+      if (matches.size() < 1) {
+//        throw new AssertionError(
+//                "Cannot find reflection executable member corresponding to "
+//                        + sourceCallable.getSignature());
+          return null;
+      }
+      if (matches.size() > 1) {
+        // FIXME workaround, not always the case
+        Executable deprecatedFound = null;
+        for(Executable match : matches){
+          if(match.getAnnotationsByType(Deprecated.class).length!=0){
+            //matches.remove(match);
+            deprecatedFound = match;
+          }
+
+        }
+        if(deprecatedFound!=null){
+          matches.remove(deprecatedFound);
+        }
+        else {
+//          throw new AssertionError(
+//                  "Found multiple reflection executable members corresponding to "
+//                          + sourceCallable.getSignature()
+//                          + ". Matching executable members are:\n"
+//                          + Arrays.toString(matches.toArray()));
+            continue;
+        }
+      }
+      map.put(matches.get(0), sourceCallable);
+    }
+    return map;
+  }
+
+  private void filterOutEnumMethods(
+          List<Executable> reflectionExecutables, List<CallableDeclaration<?>> sourceExecutables) {
+    final List<String> sourceExecutableNames =
+            sourceExecutables.stream().map(it -> it.getName().asString()).collect(toList());
+    // Remove values() method.
+    reflectionExecutables.removeIf(
+            it -> {
+              final String executableName = it.getName();
+              return executableName.equals("values")
+                      && !sourceExecutableNames.contains(executableName)
+                      && it.getParameterCount() == 0;
+            });
+    // Remove valueOf(java.lang.String) method.
+    reflectionExecutables.removeIf(
+            it -> {
+              final String executableName = it.getName();
+              return executableName.equals("valueOf")
+                      && !sourceExecutableNames.contains(executableName)
+                      && it.getParameterCount() == 1
+                      && it.getParameters()[0].getType().getName().equals("java.lang.String");
+            });
   }
 
   private ClassOrInterfaceDeclaration getClassDefinition(String className, String sourcePath)
@@ -534,32 +634,36 @@ public final class JavadocExtractor {
 
     for (int i = 0; i < reflectionParams.length; i++) {
       final Parameter reflectionParam = reflectionParams[i];
-      String reflectionQualifiedTypeName =
-          rawType(reflectionParam.getParameterizedType().getTypeName());
-      //TODO Replace the next 18 lines, which do string manipulation, by code that uses data structures
-      if (reflectionParam.isVarArgs() && !reflectionQualifiedTypeName.endsWith("[]")) {
-        // Sometimes var args type name ends with "[]", sometimes don't. That's why we need this
-        // check.
-        reflectionQualifiedTypeName += "[]";
-      }
-      reflectionQualifiedTypeName = reflectionQualifiedTypeName.replaceAll("\\$", ".");
+      try {
+          String reflectionQualifiedTypeName =
+                  rawType(reflectionParam.getParameterizedType().getTypeName());
+          //TODO Replace the next 18 lines, which do string manipulation, by code that uses data structures
+          if (reflectionParam.isVarArgs() && !reflectionQualifiedTypeName.endsWith("[]")) {
+              // Sometimes var args type name ends with "[]", sometimes don't. That's why we need this
+              // check.
+              reflectionQualifiedTypeName += "[]";
+          }
+          reflectionQualifiedTypeName = reflectionQualifiedTypeName.replaceAll("\\$", ".");
 
-      final com.github.javaparser.ast.body.Parameter sourceParam = sourceParams.get(i);
-      String sourceTypeName = rawType(sourceParam.getType().asString());
-      if (sourceParam.isVarArgs()) {
-        sourceTypeName += "[]";
-      }
+          final com.github.javaparser.ast.body.Parameter sourceParam = sourceParams.get(i);
+          String sourceTypeName = rawType(sourceParam.getType().asString());
+          if (sourceParam.isVarArgs()) {
+              sourceTypeName += "[]";
+          }
 
-      boolean sameType;
-      if (sourceTypeName.contains(".")) {
-        // Here we cannot test for equality: Consider the case where source type is "b.c" while
-        // reflection type is "a.b.c". Equality is a too strict condition.
-        sameType = reflectionQualifiedTypeName.endsWith(sourceTypeName);
-      } else {
-        sameType = (getSimpleName(reflectionQualifiedTypeName)).equals(sourceTypeName);
-      }
-      if (!sameType) {
-        return false;
+          boolean sameType;
+          if (sourceTypeName.contains(".")) {
+              // Here we cannot test for equality: Consider the case where source type is "b.c" while
+              // reflection type is "a.b.c". Equality is a too strict condition.
+              sameType = reflectionQualifiedTypeName.endsWith(sourceTypeName);
+          } else {
+              sameType = (getSimpleName(reflectionQualifiedTypeName)).equals(sourceTypeName);
+          }
+          if (!sameType) {
+              return false;
+          }
+      }catch (java.lang.TypeNotPresentException e){
+          return false;
       }
     }
 

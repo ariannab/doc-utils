@@ -3,3 +3,4 @@
 *.iml
 *.csv
 *.numbers
+src/*/resources/*

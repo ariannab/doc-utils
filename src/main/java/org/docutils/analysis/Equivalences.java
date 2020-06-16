@@ -1,5 +1,6 @@
 package org.docutils.analysis;
 
+import org.apache.commons.lang3.StringUtils;
 import org.docutils.util.KeywordsSet;
 import org.docutils.util.MatchInComment;
 import org.docutils.util.TextOperations;
@@ -19,10 +20,15 @@ public class Equivalences {
     public static MatchInComment getEquivalentOrSimilarMethod(String comment) {
         //TODO maybe a more comprehensive list (e.g. consider an external dictionary) would be better
         //TODO consider also: behaves (as?), like
-        KeywordsSet equivalenceKw = new KeywordsSet(Arrays.asList("equivalent", "similar", "analog", "same as", "identical"),
+        KeywordsSet equivalenceKw = new KeywordsSet(Arrays.asList(
+                "equivalent", "similar", "analog", "identical", "behaves", "equal to", "redundant", "same", "as", "like"
+//                "equivalent", "similar"
+        ),
                 KeywordsSet.Category.EQUIVALENCE);
 
-        KeywordsSet similarityKw = new KeywordsSet(Arrays.asList("prefer", "alternative", "replacement for"),
+        KeywordsSet similarityKw = new KeywordsSet(Arrays.asList(
+                "prefer", "alternative", "replacement for"
+                 ),
                 KeywordsSet.Category.SIMILARITY);
 
         MatchInComment matchInComment = new MatchInComment();
@@ -57,11 +63,12 @@ public class Equivalences {
         for (String word : keywordsSet.getKw()) {
             Matcher kwMatcher = Pattern.compile("\\b" + word + "\\b", Pattern.CASE_INSENSITIVE).matcher(sentence);
             if (kwMatcher.find()) {
-                complexity++;
+                //complexity++;
                 //I do not only want the sentence to contain the keywords, I also want to find a
                 //method signature in it - otherwise, what is this method equivalent to?
                 java.util.regex.Matcher methodMatch;
                 int group = 0;
+
                 if (word.equals("as")) {
                     methodMatch =
                             Pattern.compile(" as (" + methodRegex + ")").matcher(sentence);
@@ -72,6 +79,7 @@ public class Equivalences {
                 }
 
                 while (methodMatch.find()) {
+                    complexity += nestedSignatures(methodMatch, methodRegex);
                     if(!doRangesOverlap(kwMatcher, methodMatch)) {
                         //TODO check if there is an "if" or "when" or "except" - more?
                         if (keywordsSet.getCategory().equals(KeywordsSet.Category.SIMILARITY) ||
@@ -92,9 +100,31 @@ public class Equivalences {
                         }
                     }
                 }
+
             }
         }
+
         return found;
+    }
+
+    private static int nestedSignatures(Matcher methodMatch, String methodRegex) {
+        String method = methodMatch.group(0);
+        return StringUtils.countMatches(method, "(");
+        /*
+        if(parenthesis.charAt(0) == '(') {
+            //FIXME sta cosa è pessima va fixata la regex!
+            parenthesis = parenthesis.substring(1);
+        }
+        if(parenthesis!=null) {
+            Matcher insideMethod =
+                    Pattern.compile(methodRegex).matcher(parenthesis);
+
+            return insideMethod.find();
+        }
+        return false;
+        */
+
+
     }
 
     private static boolean doRangesOverlap(Matcher matcher, Matcher methodMatch) {
